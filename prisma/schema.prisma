@@ -1,0 +1,63 @@
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Agreement {
+  id                    String      @id @default(cuid())
+  title                 String
+  buyerName             String
+  sellerName            String
+  totalAmount           Int
+  currency              String      @default("USD")
+  version               Int         @default(1)
+  agreementHash         String
+  status                String      @default("ACTIVE")
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  milestones            Milestone[]
+  auditEvents           AuditEvent[]
+}
+
+model Milestone {
+  id                    String      @id @default(cuid())
+  agreementId           String
+  agreement             Agreement   @relation(fields: [agreementId], references: [id])
+  title                 String
+  description           String
+  amount                Int
+  sequence              Int
+  status                String      @default("PENDING")
+  evidenceValidated     Boolean     @default(false)
+  buyerAcceptedAt       DateTime?
+  capturedAmount        Int         @default(0)
+  capturedAt            DateTime?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  auditEvents           AuditEvent[]
+
+  @@unique([agreementId, sequence])
+}
+
+model AuditEvent {
+  id                    String      @id @default(cuid())
+  agreementId           String
+  agreement             Agreement   @relation(fields: [agreementId], references: [id])
+  milestoneId           String?
+  milestone             Milestone?  @relation(fields: [milestoneId], references: [id])
+  eventType             String
+  details               String
+  previousHash          String?
+  eventHash             String
+  createdAt             DateTime    @default(now())
+
+  @@index([agreementId, createdAt])
+}
