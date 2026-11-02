@@ -2,6 +2,7 @@
 import "dotenv/config";
 import { createHash } from "crypto";
 import { PrismaClient } from "../lib/generated/prisma/client";
+import { appendAuditEvent } from "../lib/audit";
 
 const prisma = new PrismaClient();
 
@@ -60,6 +61,34 @@ async function main() {
       },
     },
   });
+
+  // Record agreement creation only once, even if the seed runs again.
+  const existingCreationEvent = await prisma.auditEvent.findFirst({
+    where: {
+      agreementId: agreement.id,
+      eventType: "AGREEMENT_CREATED",
+    },
+  });
+
+  if (!existingCreationEvent) {
+    await appendAuditEvent({
+      agreementId: agreement.id,
+      eventType: "AGREEMENT_CREATED",
+      details: {
+        title: agreement.title,
+        buyerName: agreement.buyerName,
+        sellerName: agreement.sellerName,
+        totalAmount: agreement.totalAmount,
+        currency: agreement.currency,
+        agreementHash: agreement.agreementHash,
+        milestoneCount: agreement.milestones.length,
+      },
+    });
+
+    console.log("Agreement creation audit event recorded.");
+  } else {
+    console.log("Agreement creation audit event already exists.");
+  }
 
   console.log("ResolveAI demo agreement ready.");
   console.log("Agreement:", agreement.title);

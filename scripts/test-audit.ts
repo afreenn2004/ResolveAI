@@ -43,6 +43,14 @@ async function main() {
       details: { message: "Second test event" },
     });
 
+    const originalVerification = await verifyAuditChain(testAgreementId);
+
+if (!originalVerification.valid) {
+  throw new Error("Audit chain was invalid before tampering.");
+}
+
+console.log("SUCCESS: Original audit chain is valid.");
+
     // Deliberately modify the first event to simulate tampering.
 const firstEvent = await prisma.auditEvent.findFirst({
   where: { agreementId: testAgreementId },

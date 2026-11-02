@@ -10,54 +10,110 @@ datasource db {
 }
 
 model Agreement {
-  id                    String      @id @default(cuid())
-  title                 String
-  buyerName             String
-  sellerName            String
-  totalAmount           Int
-  currency              String      @default("USD")
-  version               Int         @default(1)
-  agreementHash         String
-  status                String      @default("ACTIVE")
-  createdAt             DateTime    @default(now())
-  updatedAt             DateTime    @updatedAt
+  id             String      @id @default(cuid())
+  title          String
+  buyerName      String
+  sellerName     String
+  totalAmount    Int
+  currency       String      @default("USD")
+  version        Int         @default(1)
+  agreementHash  String
+  status         String      @default("ACTIVE")
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
-  milestones            Milestone[]
-  auditEvents           AuditEvent[]
+  milestones     Milestone[]
+  auditEvents    AuditEvent[]
+  authorizations PaymentAuthorization[]
+  paymentOperations PaymentOperation[]
 }
 
 model Milestone {
-  id                    String      @id @default(cuid())
-  agreementId           String
-  agreement             Agreement   @relation(fields: [agreementId], references: [id])
-  title                 String
-  description           String
-  amount                Int
-  sequence              Int
-  status                String      @default("PENDING")
-  evidenceValidated     Boolean     @default(false)
-  buyerAcceptedAt       DateTime?
-  capturedAmount        Int         @default(0)
-  capturedAt            DateTime?
-  createdAt             DateTime    @default(now())
-  updatedAt             DateTime    @updatedAt
+  id                String      @id @default(cuid())
+  agreementId       String
+  agreement         Agreement   @relation(fields: [agreementId], references: [id])
+  title             String
+  description       String
+  amount            Int
+  sequence          Int
+  status            String      @default("PENDING")
+  evidenceValidated Boolean     @default(false)
+  buyerAcceptedAt   DateTime?
+  capturedAmount    Int         @default(0)
+  capturedAt        DateTime?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
 
-  auditEvents           AuditEvent[]
+  auditEvents       AuditEvent[]
+  paymentOperations PaymentOperation[]
 
   @@unique([agreementId, sequence])
 }
 
 model AuditEvent {
+  id          String      @id @default(cuid())
+  agreementId String
+  agreement   Agreement   @relation(fields: [agreementId], references: [id])
+  milestoneId String?
+  milestone   Milestone?  @relation(fields: [milestoneId], references: [id])
+  eventType   String
+  details     String
+  previousHash String?
+  eventHash   String
+  createdAt   DateTime    @default(now())
+
+  @@index([agreementId, createdAt])
+}
+
+model PaymentAuthorization {
   id                    String      @id @default(cuid())
   agreementId           String
   agreement             Agreement   @relation(fields: [agreementId], references: [id])
-  milestoneId           String?
-  milestone             Milestone?  @relation(fields: [milestoneId], references: [id])
-  eventType             String
-  details               String
-  previousHash          String?
-  eventHash             String
+
+  paypalOrderId         String      @unique
+  paypalAuthorizationId String?     @unique
+
+  amount                Int
+  currency              String      @default("USD")
+  orderStatus           String
+  authorizationStatus   String      @default("PENDING")
+
   createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  operations            PaymentOperation[]
 
   @@index([agreementId, createdAt])
+}
+
+model PaymentOperation {
+  id                String      @id @default(cuid())
+  agreementId       String
+  agreement         Agreement   @relation(fields: [agreementId], references: [id])
+
+  milestoneId       String?
+  milestone         Milestone?  @relation(fields: [milestoneId], references: [id])
+
+  authorizationId   String
+  authorization     PaymentAuthorization @relation(fields: [authorizationId], references: [id])
+
+  operationType     String
+  amount            Int
+  currency          String      @default("USD")
+  status            String      @default("PENDING")
+
+  idempotencyKey    String      @unique
+  paypalRequestId   String      @unique
+  paypalCaptureId   String?     @unique
+
+  requestDetails    String?
+  responseDetails   String?
+  failureReason     String?
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([agreementId, createdAt])
+  @@index([milestoneId])
+  @@index([authorizationId])
 }

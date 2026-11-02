@@ -1,6 +1,7 @@
 
 import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "./generated/prisma/client";
 
 interface CreateAuditEventInput {
   agreementId: string;
@@ -26,46 +27,57 @@ function createEventHash(data: {
     createdAt: data.createdAt.toISOString(),
   });
 
-  return createHash("sha256").update(hashInput).digest("hex");
+  return createHash("sha256")
+    .update(hashInput)
+    .digest("hex");
 }
 
-export async function appendAuditEvent(
+// Append an event using an existing transaction.
+export async function appendAuditEventInTransaction(
+  tx: Prisma.TransactionClient,
   input: CreateAuditEventInput
 ) {
-  return prisma.$transaction(async (tx) => {
-    const previousEvent = await tx.auditEvent.findFirst({
-      where: { agreementId: input.agreementId },
-      orderBy: [
-        { createdAt: "desc" },
-        { id: "desc" },
-      ],
-    });
+  const previousEvent = await tx.auditEvent.findFirst({
+    where: { agreementId: input.agreementId },
+    orderBy: [
+      { createdAt: "desc" },
+      { id: "desc" },
+    ],
+  });
 
-    const previousHash = previousEvent?.eventHash ?? null;
-    const createdAt = new Date();
-    const details = JSON.stringify(input.details);
+  const previousHash = previousEvent?.eventHash ?? null;
+  const createdAt = new Date();
+  const details = JSON.stringify(input.details);
 
-    const eventHash = createEventHash({
+  const eventHash = createEventHash({
+    agreementId: input.agreementId,
+    milestoneId: input.milestoneId ?? null,
+    eventType: input.eventType,
+    details,
+    previousHash,
+    createdAt,
+  });
+
+  return tx.auditEvent.create({
+    data: {
       agreementId: input.agreementId,
       milestoneId: input.milestoneId ?? null,
       eventType: input.eventType,
       details,
       previousHash,
+      eventHash,
       createdAt,
-    });
-
-    return tx.auditEvent.create({
-      data: {
-        agreementId: input.agreementId,
-        milestoneId: input.milestoneId ?? null,
-        eventType: input.eventType,
-        details,
-        previousHash,
-        eventHash,
-        createdAt,
-      },
-    });
+    },
   });
+}
+
+// Ordinary audit writes use their own transaction.
+export async function appendAuditEvent(
+  input: CreateAuditEventInput
+) {
+  return prisma.$transaction((tx) =>
+    appendAuditEventInTransaction(tx, input)
+  );
 }
 
 export async function verifyAuditChain(agreementId: string) {
