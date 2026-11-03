@@ -51,13 +51,52 @@ if (!originalVerification.valid) {
 
 console.log("SUCCESS: Original audit chain is valid.");
 
-    // Deliberately modify the first event to simulate tampering.
+    // Test several audit writes happening at the same time.
+    console.log("Testing concurrent audit writes...");
+
+    await Promise.all(
+      Array.from({ length: 5 }, (_, index) =>
+        appendAuditEvent({
+          agreementId: testAgreementId,
+          eventType: "CONCURRENT_TEST_EVENT",
+          details: {
+            message: `Concurrent event ${index + 1}`,
+          },
+        })
+      )
+    );
+
+    const concurrentEvents = await prisma.auditEvent.findMany({
+      where: { agreementId: testAgreementId },
+      orderBy: { sequence: "asc" },
+    });
+
+    const expectedSequences = [1, 2, 3, 4, 5, 6, 7];
+    const actualSequences = concurrentEvents.map(
+      (event) => event.sequence
+    );
+
+    const concurrentVerification =
+      await verifyAuditChain(testAgreementId);
+
+    if (
+      concurrentEvents.length !== 7 ||
+      JSON.stringify(actualSequences) !==
+        JSON.stringify(expectedSequences) ||
+      !concurrentVerification.valid
+    ) {
+      throw new Error(
+        "Concurrent audit-write test failed."
+      );
+    }
+
+    console.log("SUCCESS: All 5 concurrent writes were saved.");
+    console.log("SUCCESS: Audit sequences are unique and consecutive.");
+    console.log("SUCCESS: Concurrent audit chain is valid.");
+
 const firstEvent = await prisma.auditEvent.findFirst({
   where: { agreementId: testAgreementId },
-  orderBy: [
-    { createdAt: "asc" },
-    { id: "asc" },
-  ],
+  orderBy: { sequence: "asc" },
 });
 
 if (!firstEvent) {

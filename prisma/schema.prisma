@@ -17,6 +17,7 @@ model Agreement {
   totalAmount    Int
   currency       String      @default("USD")
   version        Int         @default(1)
+  auditSequence  Int         @default(0)
   agreementHash  String
   status         String      @default("ACTIVE")
   createdAt      DateTime    @default(now())
@@ -60,9 +61,11 @@ model AuditEvent {
   details     String
   previousHash String?
   eventHash   String
+  sequence    Int         @default(0)
   createdAt   DateTime    @default(now())
 
   @@index([agreementId, createdAt])
+  @@unique([agreementId, sequence])
 }
 
 model PaymentAuthorization {
