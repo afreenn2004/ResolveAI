@@ -1,6 +1,6 @@
 
 import "dotenv/config";
-import { createHash } from "crypto";
+import { createAgreementHash } from "../lib/agreement-hash";
 import { PrismaClient } from "../lib/generated/prisma/client";
 import { appendAuditEvent } from "../lib/audit";
 
@@ -36,9 +36,7 @@ async function main() {
     ],
   };
 
-  const agreementHash = createHash("sha256")
-    .update(JSON.stringify(agreementDetails))
-    .digest("hex");
+  const agreementHash = createAgreementHash(agreementDetails);
 
   const agreement = await prisma.agreement.upsert({
     where: { id: agreementDetails.id },
