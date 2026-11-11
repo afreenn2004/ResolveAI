@@ -17,6 +17,7 @@ model Agreement {
   currency      String   @default("USD")
   version       Int      @default(1)
   auditSequence Int      @default(0)
+  captureInProgress Boolean @default(false)
   agreementHash String
   status        String   @default("ACTIVE")
   createdAt     DateTime @default(now())

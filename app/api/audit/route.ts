@@ -1,9 +1,11 @@
 
-import { NextRequest, NextResponse } from "next/server";
+import { connection, NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAuditChain } from "@/lib/audit";
 
 export async function GET(request: NextRequest) {
+  await connection();
+
   try {
     const agreementId = request.nextUrl.searchParams.get("agreementId");
 
