@@ -72,9 +72,13 @@ export default function MilestoneGrid({
         headerName: "STATUS",
         flex: 1,
         minWidth: 135,
-        cellRenderer: (params: { value: string }) => {
-          const value = params.value || "PENDING";
-          const normalized = value.toUpperCase();
+        cellRenderer: (params: { value: string; data: MilestoneRow }) => {
+  const isPaid =
+    params.data.amount > 0 &&
+    params.data.capturedAmount >= params.data.amount;
+
+  const value = isPaid ? "PAID" : params.value || "PENDING";
+  const normalized = value.toUpperCase();
 
           const color =
             normalized === "COMPLETED" || normalized === "PAID"
