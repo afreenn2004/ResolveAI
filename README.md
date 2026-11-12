@@ -148,6 +148,10 @@ AG Grid Community is used; AG Studio and AG Charts are not part of this implemen
 
 Potential improvements include broader evidence evaluation, more extensive adversarial testing, additional payment-provider support, and deployment with production-grade security and monitoring.
 
+## License
+
+This project is licensed under the MIT License.
+
 ---
 
 Built for the PayPal AI Hackathon 2026.
